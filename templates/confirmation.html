@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}Confirmation{% endblock %}
+{% block content %}
+<div>
+    <h2>
+        Thank you for your booking!
+    </h2>
+    Name: {{ name }}<br>
+    E-mail: {{ email }}<br>
+    Date: {{ date }}<br>
+    Time: {{ time }}<br>
+    Number of People: {{ people }}<br>
+
+    {% if selected_option == 'accommodation' %}
+    Duration (days): {{ duration }}<br>
+    Room Type: {{ room_type }}
+
+    {% elif selected_option == 'restaurant' %}
+    Special Requests: {{ special_requests }}
+
+    {% elif selected_option == 'bowling' %}
+    Bowling Lane: {{ bowling_lane }}
+    {% endif %}
+</div>
+<div>
+    <a href="{{ url_for("index") }}" class="h6 mb-3 fw-normal">Confirm</a>
+
+</div>
+
+{% endblock %}

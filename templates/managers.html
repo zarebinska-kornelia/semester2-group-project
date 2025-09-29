@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block title %}
+  {% if option == 'income' %}
+    Managers - Income Chart
+  {% elif option == 'carbon' %}
+    Managers - Carbon Chart
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<main class="manager-container">
+  {% if option == 'income' %}
+    <h1>Income Chart</h1>
+    <div>
+      <canvas id="incomeChart" width="400" height="200"></canvas>
+    </div>
+
+    <form id="add-income-form" method="POST">
+      <div class="mb-3">
+        <label for="month" class="form-label">Month</label>
+        <input type="text" class="form-control" id="month" name="month" placeholder="e.g., July" required>
+      </div>
+      <div class="mb-3">
+        <label for="income" class="form-label">Income (EUR)</label>
+        <input type="number" class="form-control" id="income" name="income" placeholder="e.g., 12000" required>
+      </div>
+      <button type="submit" class="btn btn-primary">Add Income</button>
+    </form>
+
+    <!-- Include Chart.js Library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Include Bootstrap Bundle (including Popper.js) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+          const chartData = {{ income_data | default([]) | tojson }};
+          console.log('Initial Chart Data:', chartData); 
+      
+          const months = chartData.map(item => item.month);
+          const incomes = chartData.map(item => item.income);
+      
+          const ctx = document.getElementById('incomeChart').getContext('2d');
+          const incomeChart = new Chart(ctx, {
+              type: 'line',
+              data: {
+                  labels: months,
+                  datasets: [{
+                      label: 'Income in EUR',
+                      data: incomes,
+                      borderColor: 'rgba(75, 192, 192, 1)',
+                      backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                      borderWidth: 1
+                  }]
+              },
+              options: {
+                  scales: {
+                      y: {
+                          beginAtZero: true
+                      }
+                  }
+              }
+          });
+      
+          document.getElementById('add-income-form').addEventListener('submit', function (e) {
+              e.preventDefault();
+              
+              const month = document.getElementById('month').value;
+              const income = document.getElementById('income').value;
+          
+              console.log('Submitting new income:', { month, income });
+              
+              fetch('{{ url_for("add_income") }}', {
+                  method: 'POST',
+                  headers: {
+                      'Content-Type': 'application/x-www-form-urlencoded'
+                  },
+                  body: new URLSearchParams({
+                      month: month,
+                      income: income
+                  })
+              })
+              .then(response => {
+                  console.log('Received response:', response);
+                  if (!response.ok) {
+                      throw new Error('Network response was not ok');
+                  }
+                  return response.json();
+              })
+              .then(data => {
+                  console.log('Server response:', data); // Debugging response
+          
+                  if (data.status === 'success') {
+                      // Ensure data is of the correct type
+                      const newIncome = parseFloat(data.income);
+          
+                      // Update chart
+                      incomeChart.data.labels.push(data.month);
+                      incomeChart.data.datasets[0].data.push(newIncome);
+                      incomeChart.update();
+          
+                      // Clear input fields
+                      document.getElementById('month').value = '';
+                      document.getElementById('income').value = '';
+                  } else {
+                      alert('Failed to add income: ' + data.message);
+                  }
+              })
+              .catch((error) => {
+                  console.error('Error occurred:', error);
+                  alert('Error occurred: ' + error);
+              });
+          });
+      });
+    </script>
+
+  {% elif option == 'carbon' %}
+    <h1>Real-Time Carbon Intensity</h1>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Country</th>
+                <th>Carbon Intensity (gCO₂/kWh)</th>
+                <th>Fossil Fuel Percentage (%)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in carbon_data %}
+            <tr>
+                <td>{{ item.country }}</td>
+                <td>
+                    {% if item.carbonIntensity is not none %}
+                        {{ item.carbonIntensity }}
+                    {% else %}
+                        Data not available
+                    {% endif %}
+                </td>
+                <td>
+                    {% if item.fossilFuelPercentage is not none %}
+                        {{ item.fossilFuelPercentage }}
+                    {% else %}
+                        Data not available
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <canvas id="carbonChart" width="400" height="200"></canvas>
+
+    <script>
+        const carbonData = {{ carbon_data | tojson }};
+        const labels = carbonData.map(item => item.country);
+        const carbonIntensity = carbonData.map(item => item.carbonIntensity || 0);
+
+        const ctx = document.getElementById('carbonChart').getContext('2d');
+        const carbonChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Carbon Intensity (gCO₂/kWh)',
+                    data: carbonIntensity,
+                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Carbon Intensity (gCO₂/kWh)'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Country'
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+  {% endif %}
+</main>
+{% endblock %}
