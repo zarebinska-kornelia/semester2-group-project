@@ -1,0 +1,14 @@
+deploy_flask_app:
+  stage: deploy
+  script:
+    - git config --global --add safe.directory /var/www/infra-sem-2-project
+    - cd /var/www/infra-sem-2-project
+    - git pull https://gitlab-ci-token:${PROJECT_ACCESS_TOKEN}@git.fhict.nl/I535260/infra-sem-2-project.git
+    - sudo pip3 install -r requirements.txt
+    - sudo systemctl restart flask_app
+  tags:
+    - deploy
+    - production
+    - azure
+  only:
+    - master
